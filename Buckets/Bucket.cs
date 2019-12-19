@@ -6,6 +6,9 @@ namespace Buckets
 {
     class Bucket:Container
     {
-
+        public Bucket(int volume = 10):base()
+        {
+            _volume = volume; 
+        }
     }
 }
