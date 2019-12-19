@@ -8,14 +8,25 @@ namespace Buckets
     {
 
         #region FIELDS
-        private int _volume; 
+        private int _volume;
+        public delegate void BucketOverflowing(object sender, int Overflow);
+        #endregion
+
+        #region CONSTRUCTOR
+        public Container()
+        {
+            Name = new Guid().ToString();
+            IsOverflowing += Container_IsOverflowing;
+        }
         #endregion
 
         #region PROPERTIES
+        public string Name { get;}
         public int Volume { get { return _volume; }}
         public int Contents { get; set; }
         public bool WarnWhenFull { get; set; }
-        public bool IsFull { get { return Volume == Contents ? true : false; } }
+        public bool IsFilled { get { return Volume == Contents ? true : false; } }
+        public event BucketOverflowing IsOverflowing;
         #endregion
 
         #region METHODS
@@ -28,15 +39,23 @@ namespace Buckets
             Contents -= amount;
             if (Contents > 0) Contents = 0;
         }
-        public void Fill(int amount, out int overflow) 
+        public void Fill(int amount) 
         {
-            overflow = 0;
-            if(Contents + amount > Volume)
+            if (Contents + amount > Volume)
             {
-                overflow = (Contents + amount) - Volume;
-                Console.WriteLine($"Bucket will overflow with an excess of{overflow}. Continue? (y/n)"); 
-                Contents = (Console.ReadKey().Key == ConsoleKey.Y)?Volume:Contents;
+                int overflow = Contents + amount - Volume;
+                IsOverflowing(this, overflow);
             }
+            else Contents += amount;
+        }
+        private void Container_IsOverflowing(object sender, int overflow)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual void FillWithBucket(Bucket bucket, int amountFromBucket)
+        {
+            
         }
         #endregion
     }
