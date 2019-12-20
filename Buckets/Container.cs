@@ -9,84 +9,92 @@ namespace Buckets
 
         #region FIELDS
         protected int _volume;
-        public delegate void BucketOverflowing(object sender, int Overflow);
+        public delegate void BucketOverflowing(object sender, int amount);
+        public delegate void BucketOverflowingFromBucket(object sender, CustomEventArgs e);
         #endregion
 
         #region CONSTRUCTOR
         public Container()
         {
             Name = new Guid().ToString();
-            IsOverflowing += Container_IsOverflowing;
         }
         #endregion
 
         #region PROPERTIES
         public string Name { get;}
         public int Volume { get { return _volume; }}
-        public int Contents { get; set; }
+        public int Contents { get; protected set; }
         public bool AllowOverflow { get; set; }
-        public bool IsFilled { get { return _volume == Contents ? true : false; } }
+
         public event BucketOverflowing IsOverflowing;
+        public event BucketOverflowingFromBucket BucketOverflowingBucket;
+        public bool Stop { get; set; }
         #endregion
 
         #region METHODS
         public void Empty()
         {
-            Console.WriteLine("Emptying the bucket");
             Contents = 0;
-            Console.WriteLine("Container is empty");
         }
         public void Empty(int amount)
         {
-            Console.WriteLine($"Emptying the bucket with {amount} litres");
             if (amount > Contents)
             {
-                Console.WriteLine($"Not enough litres. Emptying cancelled");
+                throw new ArgumentException("Not enough litres to empty. Cancelling operation");
             }
-            else Contents = amount;
-            Console.WriteLine($"Container has {Contents} litres");
+            else 
+            {
+                for (int i = 0; i < amount; i++)
+                {
+                    Contents -= 1;
+                }
+            }
         }
-        public void Fill(int amount) 
-        {
-            Console.WriteLine($"Filling with {amount} litres");
+        public void Fill(int amount, Bucket bucket) 
+        { 
             if (Contents + amount > Volume)
             {
-                if (AllowOverflow)
+                int ogAmount = Contents;
+                while (!Stop)
                 {
-                    int overflow = Contents + amount - Volume;
-                    IsOverflowing(this, overflow);
+                    Contents += 1;
+                    if (Contents == Volume) BucketOverflowingBucket(this, new CustomEventArgs(amount, ogAmount, bucket));
                 }
-                else Console.WriteLine("This bucket is not allowed to overflow");
             }
-            else Contents += amount;
-            Console.WriteLine($"Conainer contains {Contents} litres");
+            else
+            {
+                for (int i = 0; i < amount; i++)
+                {
+                    Contents += 1;
+                }
+            }
         }
-        private void Container_IsOverflowing(object sender, int overflow)
+        public void Fill(int amount)
         {
-            throw new NotImplementedException();
+            if (Contents + amount > Volume)
+            {
+                while (!Stop)
+                {
+                    Contents += 1;
+                    if (Contents == Volume) IsOverflowing(this, amount);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < amount; i++)
+                {
+                    Contents += 1;
+                }
+            }
         }
-
-        public virtual void FillWithBucket(Bucket bucket, int amountFromBucket)
+        public void FillWithBucket(Bucket bucket, int amountFromBucket)
         {
             if (bucket.Contents > amountFromBucket)
             {
-                if (amountFromBucket + Contents > _volume)
-                {
-                    if (AllowOverflow)
-                    {
-                        bucket.Empty(amountFromBucket);
-                        Fill(amountFromBucket);
-                    }
-                    else Console.WriteLine("This bucket is not allowed to overflow");
-                }
-                else
-                {
-                    bucket.Empty(amountFromBucket);
-                    Fill(amountFromBucket);
-                }
+                bucket.Empty(amountFromBucket);
+                Fill(amountFromBucket, bucket);
             }
-            else Console.WriteLine("Not enough litres in bucket");
-            Console.WriteLine($"Conainer contains {Contents} litres");
+            else throw new ArgumentException("Not enough litres in the bucket to transfer. Cancelling operation");
         }
         #endregion
     }
